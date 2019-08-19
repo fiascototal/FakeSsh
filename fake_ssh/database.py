@@ -1,6 +1,8 @@
 import peewee
+from fake-ssh import config
 
-db = peewee.SqliteDatabase('logs.db')
+
+db = peewee.SqliteDatabase(config.SQLITE_PATH)
 
 
 class BaseModel(peewee.Model):
