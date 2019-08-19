@@ -1,5 +1,5 @@
 import peewee
-from fake-ssh import config
+from fake_ssh import config
 
 
 db = peewee.SqliteDatabase(config.SQLITE_PATH)
@@ -48,9 +48,9 @@ def connect():
 
 
 def create_tables():
-    DbIp.create_table()
-    DbUsername.create_table()
-    DbPassword.create_table()
-    DbLog.create_table()
-    DbValidAccount.create_table()
-    DbBanned.create_table()
+    DbIp.create_table(safe=True)
+    DbUsername.create_table(safe=True)
+    DbPassword.create_table(safe=True)
+    DbLog.create_table(safe=True)
+    DbValidAccount.create_table(safe=True)
+    DbBanned.create_table(safe=True)
