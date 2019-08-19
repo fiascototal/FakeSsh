@@ -7,23 +7,45 @@ from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPasswo
 
 
 class SshClient(threading.Thread):
-    def __init__(self, client, addr):
+    def __init__(self, client, addr, host_key):
         super().__init__()
         self._client = client
         self._addr = addr
+        self._host_key = host_key
 
     def run(self):
-        pass
+        t = paramiko.Transport(self._client)
 
 
 class FakeSshServer(object):
-    def __init__(self):
+    def __init__(self, config_filename=""):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((config.NETWORK_INTERFACE, config.NETWORK_TCP_PORT))
+
+        # load config
+        config.load_config(config_filename)
+
+        # sqlite database
         connect()
         create_tables()
+
+        # generate a key
+        self._host_key = None
+        self.generate_key()
+
         self._clients = []
+
+    def generate_key(self, key_type, key_size):
+        if key_type == "rsa":
+            print("Generate RSA key (%d bits)" % key_size)
+            self._host_key = paramiko.RSAKey.generate(key_size)
+        elif key_type == "dsa":
+            print("Generate DSA key (%d bits)" % key_size)
+            self._host_key = paramiko.DSSKey.generate(key_size)
+        else:
+            raise Exception("invalid key type: %s" % key_type)
+        print("Done (fingerprint: %s)" % self._host_key.get_fingerprint())
 
     def start(self):
         self._sock.listen(100)
@@ -38,7 +60,7 @@ class FakeSshServer(object):
                 print("This client is still ban")
                 continue
 
-            new_client = SshClient(client, addr)
+            new_client = SshClient(client, addr, self._host_key)
             new_client.start()
 
             self._clients.append(new_client)
