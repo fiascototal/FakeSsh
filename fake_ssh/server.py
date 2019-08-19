@@ -1,7 +1,19 @@
 import socket
 import datetime
+import paramiko
+import threading
 from fake_ssh import config
 from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPassword, DbBanned, DbValidAccount, DbLog
+
+
+class SshClient(threading.Thread):
+    def __init__(self, client, addr):
+        super().__init__()
+        self._client = client
+        self._addr = addr
+
+    def run(self):
+        pass
 
 
 class FakeSshServer(object):
@@ -11,6 +23,7 @@ class FakeSshServer(object):
         self._sock.bind((config.NETWORK_INTERFACE, config.NETWORK_TCP_PORT))
         connect()
         create_tables()
+        self._clients = []
 
     def start(self):
         self._sock.listen(100)
@@ -24,6 +37,11 @@ class FakeSshServer(object):
             if FakeSshServer.is_ban(client_ip):
                 print("This client is still ban")
                 continue
+
+            new_client = SshClient(client, addr)
+            new_client.start()
+
+            self._clients.append(new_client)
 
     @staticmethod
     def is_ban(ip_addr):
