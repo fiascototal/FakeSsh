@@ -1,3 +1,4 @@
+import time
 import socket
 import datetime
 import paramiko
@@ -7,9 +8,17 @@ from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPasswo
 
 
 class FakeSsh(paramiko.ServerInterface):
+    def __init__(self):
+        self._identifiers = []
+
     def check_auth_password(self, username, password):
         print("username: %s" % username)
         print("password: %s" % password)
+        self._identifiers.append((username, password))
+
+        if config.SLOW_MILLISEC > 0:
+            time.sleep(config.SLOW_MILLISEC / 1000000.0)
+
         return paramiko.AUTH_FAILED
 
 
@@ -19,14 +28,14 @@ class SshClient(threading.Thread):
         self._client = client
         self._addr = addr
         self._host_key = host_key
+        self._ssh_obj = FakeSsh()
 
     def run(self):
         t = paramiko.Transport(self._client)
         t.add_server_key(self._host_key)
 
-        server = FakeSsh()
         try:
-            t.start_server(server=server)
+            t.start_server(server=self._ssh_obj)
         except paramiko.SSHException:
             print("*** SSH negotiation failed.")
             t.close()
@@ -40,6 +49,7 @@ class SshClient(threading.Thread):
             return
         print("Authenticated!")
         chan.close()
+        t.close()
 
 
 class FakeSshServer(object):
@@ -57,17 +67,17 @@ class FakeSshServer(object):
 
         # generate a key
         self._host_key = None
-        self.generate_key()
+        self.generate_key(config.CRYPTO_KEY_TYPE, config.CRYPTO_KEY_SIZE)
 
         self._clients = []
 
     def generate_key(self, key_type, key_size):
         if key_type == "rsa":
             print("Generate RSA key (%d bits)" % key_size)
-            self._host_key = paramiko.RSAKey.generate(key_size)
+            self._host_key = paramiko.RSAKey.generate(bits=key_size)
         elif key_type == "dsa":
             print("Generate DSA key (%d bits)" % key_size)
-            self._host_key = paramiko.DSSKey.generate(key_size)
+            self._host_key = paramiko.DSSKey.generate(bits=key_size)
         else:
             raise Exception("invalid key type: %s" % key_type)
         print("Done (fingerprint: %s)" % self._host_key.get_fingerprint())
