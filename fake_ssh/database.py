@@ -1,3 +1,4 @@
+import datetime
 import peewee
 from fake_ssh import config
 
@@ -26,7 +27,7 @@ class DbLog(BaseModel):
     ip = peewee.ForeignKeyField(DbIp, backref="logs")
     username = peewee.ForeignKeyField(DbUsername, backref="logs")
     password = peewee.ForeignKeyField(DbPassword, backref="logs")
-    date = peewee.DateTimeField()
+    date = peewee.DateTimeField(default=datetime.datetime.now)
 
 
 class DbValidAccount(BaseModel):
