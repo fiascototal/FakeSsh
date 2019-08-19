@@ -16,6 +16,10 @@ period_size=7
 [ban]
 limit=50
 nb_day=30
+
+[network]
+listen_port = 22
+interface = 0.0.0.0
 """
 
 SLOW_MILLISEC = 500
@@ -24,10 +28,12 @@ EMAIL_ADDR = None
 EMAIL_PERIOD = 7
 BAN_LIMIT = 50
 BAN_DAY_MAX = 30
+NETWORK_TCP_PORT = 22
+NETWORK_INTERFACE = ""
 
 
 def load_config(filename=""):
-    global SLOW_MILLISEC, SQLITE_PATH, EMAIL_ADDR, EMAIL_PERIOD, BAN_LIMIT, BAN_DAY_MAX
+    global SLOW_MILLISEC, SQLITE_PATH, EMAIL_ADDR, EMAIL_PERIOD, BAN_LIMIT, BAN_DAY_MAX, NETWORK_TCP_PORT
 
     config = configparser.ConfigParser()
 
@@ -52,3 +58,6 @@ def load_config(filename=""):
             BAN_LIMIT = int(config["ban"]["limit"])
         if "nb_day" in config["ban"]:
             BAN_DAY_MAX = int(config["ban"]["nb_day"])
+    if "network" in config:
+        if "listen_port" in config["network"]:
+            NETWORK_TCP_PORT = int(config["network"]["listen_port"])
