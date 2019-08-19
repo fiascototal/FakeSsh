@@ -8,13 +8,26 @@ from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPasswo
 
 
 class FakeSsh(paramiko.ServerInterface):
-    def __init__(self):
-        self.login_list = []
+    def __init__(self, ip_addr):
+        self._ip, is_created = DbIp.get_or_create(value=ip_addr)
+        if is_created:
+            print("new ip: %s" % self._ip.value)
 
     def check_auth_password(self, username, password):
         print("username: %s" % username)
         print("password: %s" % password)
-        self.login_list.append((username, password))
+
+        username_obj, is_created = DbUsername.get_or_create(name=username)
+        if is_created:
+            print("new username: %s" % username_obj.name)
+
+        password_obj, _ = DbPassword.get_or_create(pwd=password)
+
+        DbLog.create(
+            ip=self._ip,
+            username=username_obj,
+            password=password_obj,
+        )
 
         if config.SLOW_MILLISEC > 0:
             time.sleep(config.SLOW_MILLISEC / 1000000.0)
@@ -26,10 +39,8 @@ class SshClient(threading.Thread):
     def __init__(self, client, ip_addr, host_key):
         super().__init__()
         self._client = client
-        self.ip_addr = ip_addr
         self._host_key = host_key
-        self._ssh_obj = FakeSsh()
-        self._ip = DbIp.get_or_create(value=ip_addr)
+        self._ssh_obj = FakeSsh(ip_addr=ip_addr)
 
     def run(self):
         t = paramiko.Transport(self._client)
@@ -50,14 +61,7 @@ class SshClient(threading.Thread):
             chan.close()
         t.close()
 
-        # manage the login list in the database
-        self.update_logins()
-
-    def update_login(self):
-        for username, password in self._ssh_obj.login_list:
-            username_obj = DbUsername.get_or_create(name=username)
-            password_obj = DbPassword.get_or_create(pwd=password)
-            DbLog.create(ip=self._ip, username=username_obj, password=password_obj,date=datetime.datetime.now())
+        print("[+] connection closed")
 
 
 class FakeSshServer(object):
@@ -92,10 +96,11 @@ class FakeSshServer(object):
 
     def start(self):
         self._sock.listen(100)
-        print("Listening for connection ...")
 
         while True:
+            print("Listening for connection ...")
             client, addr = self._sock.accept()
+
             (client_ip, client_port) = addr
             print("Got a connection from %s:%d" % (client_ip, client_port))
 
