@@ -9,12 +9,12 @@ from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPasswo
 
 class FakeSsh(paramiko.ServerInterface):
     def __init__(self):
-        self._identifiers = []
+        self.login_list = []
 
     def check_auth_password(self, username, password):
         print("username: %s" % username)
         print("password: %s" % password)
-        self._identifiers.append((username, password))
+        self.login_list.append((username, password))
 
         if config.SLOW_MILLISEC > 0:
             time.sleep(config.SLOW_MILLISEC / 1000000.0)
@@ -23,12 +23,13 @@ class FakeSsh(paramiko.ServerInterface):
 
 
 class SshClient(threading.Thread):
-    def __init__(self, client, addr, host_key):
+    def __init__(self, client, ip_addr, host_key):
         super().__init__()
         self._client = client
-        self._addr = addr
+        self.ip_addr = ip_addr
         self._host_key = host_key
         self._ssh_obj = FakeSsh()
+        self._ip = DbIp.get_or_create(value=ip_addr)
 
     def run(self):
         t = paramiko.Transport(self._client)
@@ -43,13 +44,20 @@ class SshClient(threading.Thread):
 
         # wait for auth
         chan = t.accept(20)
-        if chan is None:
-            print("*** No channel.")
-            t.close()
-            return
-        print("Authenticated!")
-        chan.close()
+
+        # we don't care about the result of accept because we will close the connection after all
+        if chan:
+            chan.close()
         t.close()
+
+        # manage the login list in the database
+        self.update_logins()
+
+    def update_login(self):
+        for username, password in self._ssh_obj.login_list:
+            username_obj = DbUsername.get_or_create(name=username)
+            password_obj = DbPassword.get_or_create(pwd=password)
+            DbLog.create(ip=self._ip, username=username_obj, password=password_obj,date=datetime.datetime.now())
 
 
 class FakeSshServer(object):
@@ -95,7 +103,7 @@ class FakeSshServer(object):
                 print("This client is still ban")
                 continue
 
-            new_client = SshClient(client, addr, self._host_key)
+            new_client = SshClient(client, client_ip, self._host_key)
             new_client.start()
 
             self._clients.append(new_client)
