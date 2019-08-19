@@ -27,7 +27,7 @@ class DbLog(BaseModel):
     date = peewee.DateTimeField()
 
 
-class ValidAccount(BaseModel):
+class DbValidAccount(BaseModel):
     date_added = peewee.DateTimeField()
     date_last_check = peewee.DateTimeField()
     ip = peewee.ForeignKeyField(DbIp, backref="accounts")
@@ -35,7 +35,20 @@ class ValidAccount(BaseModel):
     password = peewee.ForeignKeyField(DbPassword, backref="accounts")
 
 
-class Banned(BaseModel):
+class DbBanned(BaseModel):
     ip = peewee.ForeignKeyField(DbIp, backref="bans")
     date = peewee.DateTimeField()
     duration = peewee.IntegerField()
+
+
+def connect():
+    db.connect()
+
+
+def create_tables():
+    DbIp.create_table()
+    DbUsername.create_table()
+    DbPassword.create_table()
+    DbLog.create_table()
+    DbValidAccount.create_table()
+    DbBanned.create_table()
