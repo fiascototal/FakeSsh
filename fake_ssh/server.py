@@ -6,6 +6,13 @@ from fake_ssh import config
 from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPassword, DbBanned, DbValidAccount, DbLog
 
 
+class FakeSsh(paramiko.ServerInterface):
+    def check_auth_password(self, username, password):
+        print("username: %s" % username)
+        print("password: %s" % password)
+        return paramiko.AUTH_FAILED
+
+
 class SshClient(threading.Thread):
     def __init__(self, client, addr, host_key):
         super().__init__()
@@ -15,6 +22,24 @@ class SshClient(threading.Thread):
 
     def run(self):
         t = paramiko.Transport(self._client)
+        t.add_server_key(self._host_key)
+
+        server = FakeSsh()
+        try:
+            t.start_server(server=server)
+        except paramiko.SSHException:
+            print("*** SSH negotiation failed.")
+            t.close()
+            return
+
+        # wait for auth
+        chan = t.accept(20)
+        if chan is None:
+            print("*** No channel.")
+            t.close()
+            return
+        print("Authenticated!")
+        chan.close()
 
 
 class FakeSshServer(object):
