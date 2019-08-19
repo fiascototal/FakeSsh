@@ -6,20 +6,24 @@ import configparser
 example of INI file:
 
 [general]
-slow_millisec=500
-sqlite_path=logs.db
+slow_millisec=INTEGER
+sqlite_path=DATABASE_PATH
 
 [mail]
-address=not_set@mail.com
-period_size=7
+address=EMAIL_ADDRESS
+period_size=INTEGER
 
 [ban]
-limit=50
-nb_day=30
+limit=INTEGER
+nb_day=INTEGER
 
 [network]
-listen_port = 22
+listen_port = INTEGER
 interface = 0.0.0.0
+
+[crypto]
+key_type = rsa|dsa
+key_size = 1024
 """
 
 SLOW_MILLISEC = 500
@@ -30,10 +34,13 @@ BAN_LIMIT = 50
 BAN_DAY_MAX = 30
 NETWORK_TCP_PORT = 22
 NETWORK_INTERFACE = ""
+CRYPTO_KEY_TYPE = "rsa"
+CRYPTO_KEY_SIZE = 1024
 
 
 def load_config(filename=""):
     global SLOW_MILLISEC, SQLITE_PATH, EMAIL_ADDR, EMAIL_PERIOD, BAN_LIMIT, BAN_DAY_MAX, NETWORK_TCP_PORT
+    global CRYPTO_KEY_SIZE, CRYPTO_KEY_TYPE
 
     config = configparser.ConfigParser()
 
@@ -61,3 +68,8 @@ def load_config(filename=""):
     if "network" in config:
         if "listen_port" in config["network"]:
             NETWORK_TCP_PORT = int(config["network"]["listen_port"])
+    if "crypto" in config:
+        if "key_type" in config["crypto"]:
+            CRYPTO_KEY_TYPE = config["crypto"]["key_type"]
+        if "key_size" in config["crypto"]["key_size"]:
+            CRYPTO_KEY_SIZE = int(config["crypto"]["key_size"])
