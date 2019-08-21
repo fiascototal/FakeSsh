@@ -12,6 +12,8 @@ class FakeSshClient(threading.Thread):
         self._password = password
 
     def run(self):
+        print("[+] connect back to %s using %s:%s" % (self._hostname, self._username, self._password))
+
         client = paramiko.SSHClient()
         try:
             client.connect(
@@ -21,10 +23,10 @@ class FakeSshClient(threading.Thread):
                 password=self._password,
                 timeout=5)
         except Exception as err:
-            print("connection failed: %s" % err)
+            print("  [-] connection failed: %s" % err)
             return
 
-        print("connection success")
+        print("  [+] connection success")
         client.close()
 
         self.add_valid_account()

@@ -12,22 +12,19 @@ __version__ = "1.0"
 
 class FakeSsh(paramiko.ServerInterface):
     def __init__(self, ip_addr):
-        self._ip, is_created = DbIp.get_or_create(value=ip_addr)
-        if is_created:
-            print("new ip: %s" % self._ip.value)
+        self._ip_obj = DbIp.get(value=ip_addr)
 
     def check_auth_password(self, username, password):
-        print("username: %s" % username)
-        print("password: %s" % password)
+        print("[+] got a login try: %s - %s - %s" % (self._ip_obj.value, username, password))
 
         username_obj, is_created = DbUsername.get_or_create(name=username)
         if is_created:
-            print("new username: %s" % username_obj.name)
+            print("[+] new username: %s" % username_obj.name)
 
         password_obj, _ = DbPassword.get_or_create(pwd=password)
 
         DbLog.create(
-            ip=self._ip,
+            ip=self._ip_obj,
             username=username_obj,
             password=password_obj,
         )
@@ -35,7 +32,7 @@ class FakeSsh(paramiko.ServerInterface):
         if config.SLOW_MILLISEC > 0:
             time.sleep(config.SLOW_MILLISEC / 1000000.0)
 
-        back_client = FakeSshClient(self._ip.value, username, password)
+        back_client = FakeSshClient(self._ip_obj.value, username, password)
         back_client.start()
 
         return paramiko.AUTH_FAILED
@@ -55,37 +52,43 @@ class SshClient(threading.Thread):
         self._ssh_obj = FakeSsh(ip_addr=ip_addr)
 
     def run(self):
-        t = paramiko.Transport(self._client)
-        t.add_server_key(self._host_key)
-
         try:
-            t.start_server(server=self._ssh_obj)
-        except paramiko.SSHException:
-            print("*** SSH negotiation failed.")
+            t = paramiko.Transport(self._client)
+            t.add_server_key(self._host_key)
+
+            try:
+                t.start_server(server=self._ssh_obj)
+            except paramiko.SSHException:
+                print("  [-] SSH negotiation failed.")
+                t.close()
+                return
+
+            # wait for auth
+            chan = t.accept(20)
+
+            # we don't care about the result of accept because we will close the connection after all
+            if chan:
+                chan.close()
             t.close()
-            return
 
-        # wait for auth
-        chan = t.accept(20)
+            print("  [+] connection closed")
 
-        # we don't care about the result of accept because we will close the connection after all
-        if chan:
-            chan.close()
-        t.close()
+            # now we check if we need to ban this client
+            if DbLog.select().where(
+                    DbLog.ip == self._ip_addr,
+                    DbLog.date > datetime.datetime.now() - datetime.timedelta(days=config.BAN_LIMIT_PERIOD)
+            ).count() > config.BAN_LIMIT:
+                print("[!] ban ip %s" % self._ip_addr)
+                DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
 
-        print("[+] connection closed")
-
-        # now we check if we need to ban this client
-        if DbLog.select().where(
-                DbLog.ip == self._ip_addr,
-                DbLog.date > datetime.datetime.now() - datetime.timedelta(days=config.BAN_LIMIT_PERIOD)
-        ).count() > config.BAN_LIMIT:
-            print("[!] ban ip %s" % self._ip_addr)
-            DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
+        except Exception as err:
+            print("  [-] Error: %s" % err)
 
 
 class FakeSshServer(object):
     def __init__(self, config_filename=""):
+        print("[+] fake ssh server started")
+
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((config.NETWORK_INTERFACE, config.NETWORK_TCP_PORT))
@@ -105,27 +108,31 @@ class FakeSshServer(object):
 
     def generate_key(self, key_type, key_size):
         if key_type == "rsa":
-            print("Generate RSA key (%d bits)" % key_size)
+            print("[+] Generate RSA key (%d bits)" % key_size)
             self._host_key = paramiko.RSAKey.generate(bits=key_size)
         elif key_type == "dsa":
-            print("Generate DSA key (%d bits)" % key_size)
+            print("[+] Generate DSA key (%d bits)" % key_size)
             self._host_key = paramiko.DSSKey.generate(bits=key_size)
         else:
             raise Exception("invalid key type: %s" % key_type)
-        print("Done (fingerprint: %s)" % self._host_key.get_fingerprint())
+        print("  [+] fingerprint: %s" % (":".join(["%02X" % x for x in self._host_key.get_fingerprint()])))
 
     def start(self):
         self._sock.listen(100)
 
         while True:
-            print("Listening for connection ...")
+            print("[+] Listening for connection ...")
             client, addr = self._sock.accept()
 
             (client_ip, client_port) = addr
-            print("Got a connection from %s:%d" % (client_ip, client_port))
+            print("[+] Got a connection from %s:%d" % (client_ip, client_port))
+
+            ip_obj, is_created = DbIp.get_or_create(value=client_ip)
+            if is_created:
+                print("[+] new ip: %s" % ip_obj.value)
 
             if FakeSshServer.is_ban(client_ip):
-                print("This client is still ban")
+                print("[-] This client is still ban")
                 continue
 
             new_client = SshClient(client, client_ip, self._host_key)
