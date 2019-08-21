@@ -74,15 +74,20 @@ class SshClient(threading.Thread):
             print("  [+] connection closed")
 
             # now we check if we need to ban this client
-            if DbLog.select().where(
-                    DbLog.ip == self._ip_addr,
-                    DbLog.date > datetime.datetime.now() - datetime.timedelta(days=config.BAN_LIMIT_PERIOD)
-            ).count() > config.BAN_LIMIT:
-                print("[!] ban ip %s" % self._ip_addr)
-                DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
+            self.check4ban()
 
         except Exception as err:
             print("  [-] Error: %s" % err)
+
+    def check4ban(self):
+        ip_obj = DbIp.get(value=self._ip_addr)
+
+        if DbLog.select().where(
+                DbLog.ip == ip_obj,
+                DbLog.date > datetime.datetime.now() - datetime.timedelta(days=config.BAN_LIMIT_PERIOD)
+        ).count() > config.BAN_LIMIT:
+            print("[!] ban ip %s" % self._ip_addr)
+            DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
 
 
 class FakeSshServer(object):
