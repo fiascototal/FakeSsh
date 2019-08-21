@@ -15,13 +15,15 @@ class FakeSshClient(threading.Thread):
         print("[+] connect back to %s using %s:%s" % (self._hostname, self._username, self._password))
 
         client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
         try:
             client.connect(
                 hostname=self._hostname,
                 port=22,
                 username=self._username,
                 password=self._password,
-                timeout=5)
+                timeout=10)
         except Exception as err:
             print("  [-] connection failed: %s" % err)
             return
