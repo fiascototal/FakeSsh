@@ -31,8 +31,8 @@ class DbLog(BaseModel):
 
 
 class DbValidAccount(BaseModel):
-    date_added = peewee.DateTimeField()
-    date_last_check = peewee.DateTimeField()
+    date_added = peewee.DateTimeField(default=datetime.datetime.now)
+    date_last_check = peewee.DateTimeField(default=datetime.datetime.now)
     ip = peewee.ForeignKeyField(DbIp, backref="accounts")
     username = peewee.ForeignKeyField(DbUsername, backref="accounts")
     password = peewee.ForeignKeyField(DbPassword, backref="accounts")

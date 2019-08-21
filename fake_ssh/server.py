@@ -4,7 +4,10 @@ import datetime
 import paramiko
 import threading
 from fake_ssh import config
-from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPassword, DbBanned, DbValidAccount, DbLog
+from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPassword, DbBanned, DbLog
+from fake_ssh.client import FakeSshClient
+
+__version__ = "1.0"
 
 
 class FakeSsh(paramiko.ServerInterface):
@@ -32,7 +35,15 @@ class FakeSsh(paramiko.ServerInterface):
         if config.SLOW_MILLISEC > 0:
             time.sleep(config.SLOW_MILLISEC / 1000000.0)
 
+        back_client = FakeSshClient(self._ip.value, username, password)
+        back_client.start()
+
         return paramiko.AUTH_FAILED
+
+    def get_banner(self):
+        lang = "en-US"
+        banner = "SSH honeypot with auto login back (version: %s)" % __version__
+        return banner, lang
 
 
 class SshClient(threading.Thread):
