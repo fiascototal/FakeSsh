@@ -10,7 +10,12 @@ slow_millisec=INTEGER
 sqlite_path=DATABASE_PATH
 
 [mail]
-address=EMAIL_ADDRESS
+address_from=EMAIL_ADDRESS
+address_to=EMAIL_ADDRESS
+smtp_host=HOST
+smtp_port=INTEGER
+smtp_login=USERNAME
+smtp_password=PASSWORD
 period_size=INTEGER
 
 [ban]
@@ -29,8 +34,13 @@ key_size = 1024
 
 SLOW_MILLISEC = 500
 SQLITE_PATH = "logs.db"
-EMAIL_ADDR = None
+EMAIL_ADDR_FROM = None
+EMAIL_ADDR_TO = None
 EMAIL_PERIOD = 7
+EMAIL_SMTP_HOST = None
+EMAIL_SMTP_PORT = 587
+EMAIL_SMTP_USERNAME = None
+EMAIL_SMTP_PASSWORD = None
 BAN_LIMIT = 50
 BAN_LIMIT_PERIOD = 7
 BAN_DAY_MAX = 30
@@ -42,7 +52,7 @@ CRYPTO_KEY_SIZE = 1024
 
 def load_config(filename=""):
     global SLOW_MILLISEC, SQLITE_PATH
-    global EMAIL_ADDR, EMAIL_PERIOD
+    global EMAIL_ADDR_FROM, EMAIL_PERIOD, EMAIL_ADDR_TO, EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, EMAIL_SMTP_USERNAME, EMAIL_SMTP_PASSWORD
     global BAN_LIMIT, BAN_DAY_MAX, BAN_LIMIT_PERIOD
     global NETWORK_TCP_PORT, NETWORK_INTERFACE
     global CRYPTO_KEY_SIZE, CRYPTO_KEY_TYPE
@@ -62,10 +72,20 @@ def load_config(filename=""):
             SQLITE_PATH = config["general"]["sqlite_path"]
 
     if "mail" in config:
-        if "address" in config["mail"]:
-            EMAIL_ADDR = config["mail"]["address"]
+        if "address_from" in config["mail"]:
+            EMAIL_ADDR_FROM = config["mail"]["address_from"]
         if "period" in config["mail"]:
             EMAIL_PERIOD = int(config["mail"]["period"])
+        if "address_to" in config["mail"]:
+            EMAIL_ADDR_TO = config["mail"]["address_to"]
+        if "smtp_host" in config["mail"]:
+            EMAIL_SMTP_HOST = config["mail"]["smtp_host"]
+        if "smtp_port" in config["mail"]:
+            EMAIL_SMTP_PORT = int(config["mail"]["smtp_port"])
+        if "smtp_login" in config["mail"]:
+            EMAIL_SMTP_USERNAME = config["mail"]["smtp_login"]
+        if "smtp_password" in config["mail"]:
+            EMAIL_SMTP_PASSWORD = config["mail"]["smtp_password"]
 
     if "ban" in config:
         if "limit" in config["ban"]:
