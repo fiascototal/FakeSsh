@@ -44,11 +44,8 @@ class DbBanned(BaseModel):
     duration = peewee.IntegerField()
 
 
-def connect():
+def init_db():
     db.connect()
-
-
-def create_tables():
     DbIp.create_table(safe=True)
     DbUsername.create_table(safe=True)
     DbPassword.create_table(safe=True)

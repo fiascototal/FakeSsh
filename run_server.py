@@ -2,6 +2,8 @@
 
 import argparse
 from fake_ssh.server import FakeSshServer
+from fake_ssh import config
+from fake_ssh import database
 
 
 def _main():
@@ -9,7 +11,10 @@ def _main():
     parser.add_argument("-f", "--config", help="You can specify a custom configuration file", default="")
     args = parser.parse_args()
 
-    srv = FakeSshServer(config_filename=args.config)
+    config.load_config(args.config)
+    database.init_db()
+
+    srv = FakeSshServer()
     srv.start()
 
 

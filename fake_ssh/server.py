@@ -4,7 +4,7 @@ import datetime
 import paramiko
 import threading
 from fake_ssh import config
-from fake_ssh.database import connect, create_tables, DbIp, DbUsername, DbPassword, DbBanned, DbLog
+from fake_ssh.database import DbIp, DbUsername, DbPassword, DbBanned, DbLog
 from fake_ssh.client import FakeSshClient
 
 __version__ = "1.0"
@@ -91,19 +91,12 @@ class SshClient(threading.Thread):
 
 
 class FakeSshServer(object):
-    def __init__(self, config_filename=""):
+    def __init__(self):
         print("[+] fake ssh server started")
 
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((config.NETWORK_INTERFACE, config.NETWORK_TCP_PORT))
-
-        # load config
-        config.load_config(config_filename)
-
-        # sqlite database
-        connect()
-        create_tables()
 
         # generate a key
         self._host_key = None
