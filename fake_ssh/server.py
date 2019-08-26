@@ -90,8 +90,11 @@ class SshClient(threading.Thread):
             DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
 
 
-class FakeSshServer(object):
+class FakeSshServer(threading.Thread):
+
     def __init__(self):
+        super().__init__()
+
         print("[+] fake ssh server started")
 
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -115,7 +118,7 @@ class FakeSshServer(object):
             raise Exception("invalid key type: %s" % key_type)
         print("  [+] fingerprint: %s" % (":".join(["%02X" % x for x in self._host_key.get_fingerprint()])))
 
-    def start(self):
+    def run(self):
         self._sock.listen(100)
 
         while True:
