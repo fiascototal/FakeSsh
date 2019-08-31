@@ -3,6 +3,7 @@ import socket
 import datetime
 import paramiko
 import threading
+import logging
 from fake_ssh import config
 from fake_ssh.database import DbIp, DbUsername, DbPassword, DbBanned, DbLog
 from fake_ssh.client import FakeSshClient
@@ -15,11 +16,11 @@ class FakeSsh(paramiko.ServerInterface):
         self._ip_obj = DbIp.get(value=ip_addr)
 
     def check_auth_password(self, username, password):
-        print("[+] got a login try: %s - %s - %s" % (self._ip_obj.value, username, password))
+        logging.info("[+] got a login try: %s - %s - %s" % (self._ip_obj.value, username, password))
 
         username_obj, is_created = DbUsername.get_or_create(name=username)
         if is_created:
-            print("[+] new username: %s" % username_obj.name)
+            logging.info("[+] new username: %s" % username_obj.name)
 
         password_obj, _ = DbPassword.get_or_create(pwd=password)
 
@@ -59,7 +60,7 @@ class SshClient(threading.Thread):
             try:
                 t.start_server(server=self._ssh_obj)
             except paramiko.SSHException:
-                print("  [-] SSH negotiation failed.")
+                logging.error("  [-] SSH negotiation failed.")
                 t.close()
                 return
 
@@ -71,13 +72,13 @@ class SshClient(threading.Thread):
                 chan.close()
             t.close()
 
-            print("  [+] connection closed")
+            logging.info("  [+] connection closed")
 
             # now we check if we need to ban this client
             self.check4ban()
 
         except Exception as err:
-            print("  [-] Error: %s" % err)
+            logging.error("  [-] Error: %s" % err)
 
     def check4ban(self):
         ip_obj = DbIp.get(value=self._ip_addr)
@@ -86,7 +87,7 @@ class SshClient(threading.Thread):
                 DbLog.ip == ip_obj,
                 DbLog.date > datetime.datetime.now() - datetime.timedelta(days=config.BAN_LIMIT_PERIOD)
         ).count() > config.BAN_LIMIT:
-            print("[!] ban ip %s" % self._ip_addr)
+            logging.info("[!] ban ip %s" % self._ip_addr)
             DbBanned.create(ip=self._ip_addr, duration=config.BAN_DAY_MAX)
 
 
@@ -109,31 +110,31 @@ class FakeSshServer(threading.Thread):
 
     def generate_key(self, key_type, key_size):
         if key_type == "rsa":
-            print("[+] Generate RSA key (%d bits)" % key_size)
+            logging.info("[+] Generate RSA key (%d bits)" % key_size)
             self._host_key = paramiko.RSAKey.generate(bits=key_size)
         elif key_type == "dsa":
-            print("[+] Generate DSA key (%d bits)" % key_size)
+            logging.info("[+] Generate DSA key (%d bits)" % key_size)
             self._host_key = paramiko.DSSKey.generate(bits=key_size)
         else:
             raise Exception("invalid key type: %s" % key_type)
-        print("  [+] fingerprint: %s" % (":".join(["%02X" % x for x in self._host_key.get_fingerprint()])))
+        logging.info("  [+] fingerprint: %s" % (":".join(["%02X" % x for x in self._host_key.get_fingerprint()])))
 
     def run(self):
         self._sock.listen(100)
 
         while True:
-            print("[+] Listening for connection ...")
+            logging.info("[+] Listening for connection ...")
             client, addr = self._sock.accept()
 
             (client_ip, client_port) = addr
-            print("[+] Got a connection from %s:%d" % (client_ip, client_port))
+            logging.info("[+] Got a connection from %s:%d" % (client_ip, client_port))
 
             ip_obj, is_created = DbIp.get_or_create(value=client_ip)
             if is_created:
-                print("[+] new ip: %s" % ip_obj.value)
+                logging.info("[+] new ip: %s" % ip_obj.value)
 
             if FakeSshServer.is_ban(client_ip):
-                print("[-] This client is still ban")
+                logging.info("[-] This client is still ban")
                 continue
 
             new_client = SshClient(client, client_ip, self._host_key)

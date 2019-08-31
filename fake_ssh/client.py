@@ -1,5 +1,6 @@
 import threading
 import paramiko
+import logging
 from fake_ssh.database import DbValidAccount, DbIp, DbUsername, DbPassword
 
 
@@ -12,7 +13,7 @@ class FakeSshClient(threading.Thread):
         self._password = password
 
     def run(self):
-        print("[+] connect back to %s using %s:%s" % (self._hostname, self._username, self._password))
+        logging.info("[+] connect back to %s using %s:%s" % (self._hostname, self._username, self._password))
 
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -25,10 +26,10 @@ class FakeSshClient(threading.Thread):
                 password=self._password,
                 timeout=10)
         except Exception as err:
-            print("  [-] connection failed: %s" % err)
+            logging.error("  [-] connection failed: %s" % err)
             return
 
-        print("  [+] connection success")
+        logging.info("  [+] connection success")
         client.close()
 
         self.add_valid_account()

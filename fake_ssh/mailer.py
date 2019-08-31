@@ -1,3 +1,4 @@
+import logging
 import smtplib
 import ssl
 import datetime
@@ -10,7 +11,7 @@ from fake_ssh.database import DbIp, DbUsername, DbPassword, DbLog, DbBanned, DbV
 
 def send_mail():
     if config.EMAIL_ADDR_FROM and config.EMAIL_ADDR_TO and config.EMAIL_SMTP_HOST:
-        print("[+] send mail")
+        logging.info("[+] send mail")
 
         cur_date = datetime.datetime.now()
         first_date_log = DbLog.select().order_by(DbLog.id.asc()).get().date
@@ -89,4 +90,4 @@ OTHER
             server.close()
 
         except Exception as err:
-            print("[-] smtp failed: %s" % err)
+            logging.error("[-] smtp failed: %s" % err)

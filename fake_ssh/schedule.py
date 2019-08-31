@@ -5,6 +5,7 @@ basic implementation of a timer that schedule threaded actions every X days
 
 import datetime
 import threading
+import logging
 
 # global that contains the list of scheduled callbacks
 _waiting_list = list()
@@ -27,6 +28,7 @@ def tick():
     now = datetime.datetime.now()
     for item in _waiting_list:
         if item["time_start"] + item["period"] < now:
+            logging.info("run scheduler for %s" % str(item["callback"]))
 
             # call the callback
             t = threading.Thread(target=item["callback"])
