@@ -1,7 +1,7 @@
 import threading
 import paramiko
 import logging
-from fake_ssh.database import DbValidAccount, DbIp, DbUsername, DbPassword
+from .database import DbValidAccount, DbIp, DbUsername, DbPassword
 
 
 class FakeSshClient(threading.Thread):

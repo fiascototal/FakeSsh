@@ -1,5 +1,5 @@
 import logging
-from fake_ssh import config
+from . import config
 
 
 def setup_logs():

@@ -5,8 +5,8 @@ import datetime
 import peewee
 import os
 from email.message import EmailMessage
-from fake_ssh import config
-from fake_ssh.database import DbIp, DbUsername, DbPassword, DbLog, DbBanned, DbValidAccount
+from . import config
+from .database import DbIp, DbUsername, DbPassword, DbLog, DbBanned, DbValidAccount
 
 
 def send_mail():

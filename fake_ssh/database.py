@@ -1,6 +1,6 @@
 import datetime
 import peewee
-from fake_ssh import config
+from . import config
 
 
 db = peewee.SqliteDatabase(config.SQLITE_PATH)

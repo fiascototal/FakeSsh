@@ -4,9 +4,9 @@ import datetime
 import paramiko
 import threading
 import logging
-from fake_ssh import config
-from fake_ssh.database import DbIp, DbUsername, DbPassword, DbBanned, DbLog
-from fake_ssh.client import FakeSshClient
+from . import config
+from .database import DbIp, DbUsername, DbPassword, DbBanned, DbLog
+from .client import FakeSshClient
 
 __version__ = "1.0"
 
